@@ -32,6 +32,21 @@ def _invoke_bedrock_boto3(body: dict) -> dict:
     return json.loads(response['body'].read())
 
 
+def _should_fallback_to_boto3(response: httpx.Response) -> bool:
+    if response.status_code < 400:
+        return False
+    try:
+        text = response.text
+    except Exception:
+        text = ''
+    markers = (
+        'AccessDeniedException',
+        'CallWithBearerToken',
+        'not authorized',
+    )
+    return any(marker in text for marker in markers)
+
+
 def analyze_wallet_with_bedrock(
     wallet: str, metrics: dict, intelligence: dict, social: dict | None = None
 ) -> tuple[str, str]:
@@ -75,7 +90,7 @@ def analyze_wallet_with_bedrock(
         }
         with httpx.Client(timeout=60) as client:
             response = client.post(endpoint, headers=headers, content=json.dumps(body))
-            if response.status_code >= 400 and settings.aws_access_key_id:
+            if _should_fallback_to_boto3(response):
                 payload = _invoke_bedrock_boto3(body)
             else:
                 response.raise_for_status()
