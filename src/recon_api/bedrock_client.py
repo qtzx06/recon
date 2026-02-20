@@ -47,6 +47,10 @@ def _should_fallback_to_boto3(response: httpx.Response) -> bool:
     return any(marker in text for marker in markers)
 
 
+def _has_aws_creds() -> bool:
+    return bool(settings.aws_access_key_id and settings.aws_secret_access_key)
+
+
 def analyze_wallet_with_bedrock(
     wallet: str, metrics: dict, intelligence: dict, social: dict | None = None
 ) -> tuple[str, str]:
@@ -78,7 +82,11 @@ def analyze_wallet_with_bedrock(
         ],
     }
 
-    if settings.bedrock_api_key:
+    # Prefer normal AWS credential auth when available; bearer-token auth
+    # often lacks bedrock:CallWithBearerToken permission in workshop roles.
+    if _has_aws_creds():
+        payload = _invoke_bedrock_boto3(body)
+    elif settings.bedrock_api_key:
         endpoint = (
             f'https://bedrock-runtime.{settings.aws_region}.amazonaws.com/'
             f'model/{settings.bedrock_model_id}/invoke'
