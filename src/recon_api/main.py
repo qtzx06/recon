@@ -1,11 +1,12 @@
 import json
 from collections.abc import Callable, Generator
+from pathlib import Path
 from queue import Queue
 from threading import Thread
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import ValidationError
 
 from .bedrock_client import analyze_wallet_with_bedrock
@@ -24,6 +25,7 @@ from .x_client import XSearchError, search_x_mentions
 
 app = FastAPI(title='recon API', version='0.1.0')
 EventCallback = Callable[[str, dict | None], None]
+STATIC_DIR = Path(__file__).parent / 'static'
 
 
 def _looks_like_solana_wallet(value: str) -> bool:
@@ -36,6 +38,16 @@ def _looks_like_solana_wallet(value: str) -> bool:
 @app.get('/health')
 def health() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+@app.get('/', include_in_schema=False)
+def app_root() -> FileResponse:
+    return FileResponse(STATIC_DIR / 'index.html')
+
+
+@app.get('/app', include_in_schema=False)
+def app_dashboard() -> FileResponse:
+    return FileResponse(STATIC_DIR / 'index.html')
 
 
 def _emit(on_event: EventCallback | None, event: str, data: dict | None = None) -> None:

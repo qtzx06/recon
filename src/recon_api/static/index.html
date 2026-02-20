@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>recon live</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #101a2f;
+        --panel-2: #0f1a24;
+        --text: #dbe8ff;
+        --muted: #8ca3c7;
+        --ok: #25c17a;
+        --warn: #f5b14f;
+        --err: #ff6b6b;
+        --accent: #50b2ff;
+        --line: #1f3150;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(1200px 600px at 100% -20%, #17376a 0%, transparent 60%),
+          radial-gradient(1000px 800px at -20% 120%, #1a4a42 0%, transparent 50%),
+          var(--bg);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1160px;
+        margin: 24px auto 40px;
+        padding: 0 16px;
+      }
+      .head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: 0.3px;
+      }
+      .sub {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .status-pill {
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 10px;
+      }
+      .card {
+        background: linear-gradient(180deg, #11203a 0%, var(--panel) 100%);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 140px 120px;
+        gap: 10px;
+        align-items: center;
+      }
+      input,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #0b1527;
+        color: var(--text);
+        padding: 11px 12px;
+        font-size: 14px;
+      }
+      input:focus {
+        outline: 2px solid #2e78c5;
+        border-color: transparent;
+      }
+      button {
+        cursor: pointer;
+        background: linear-gradient(180deg, #2f9df8 0%, #2372db 100%);
+        border: none;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .grid {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .section-title {
+        margin: 0 0 8px;
+        font-size: 15px;
+        color: #b8d2ff;
+      }
+      .logs {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        min-height: 340px;
+        max-height: 420px;
+        overflow: auto;
+        padding: 8px;
+        font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+        font-size: 12px;
+      }
+      .log {
+        border-bottom: 1px dashed #20314d;
+        padding: 7px 2px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .log:last-child {
+        border-bottom: 0;
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .err {
+        color: var(--err);
+      }
+      .json {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        min-height: 340px;
+        max-height: 420px;
+        overflow: auto;
+        padding: 10px;
+        margin: 0;
+        font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+        font-size: 12px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .chip {
+        font-size: 12px;
+        border: 1px solid var(--line);
+        color: #bcd4ff;
+        border-radius: 999px;
+        padding: 4px 9px;
+        background: #0d1627;
+      }
+      .metrics {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .metric {
+        background: #0c172a;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .metric .k {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-bottom: 4px;
+      }
+      .metric .v {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      @media (max-width: 920px) {
+        .controls {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <h1>recon live dashboard</h1>
+          <p class="sub">wallet intelligence + live pipeline logs</p>
+        </div>
+        <div id="status" class="status-pill">idle</div>
+      </div>
+
+      <div class="card">
+        <div class="controls">
+          <input id="wallet" placeholder="sol wallet (base58)" />
+          <input id="sigs" type="number" min="5" max="200" value="20" />
+          <button id="runBtn">run report</button>
+        </div>
+        <div class="chips">
+          <span class="chip">endpoint: /v1/wallet/report/stream</span>
+          <span class="chip">includes solana + x + bedrock trace</span>
+        </div>
+
+        <div id="metrics" class="metrics"></div>
+
+        <div class="grid">
+          <div>
+            <h3 class="section-title">live events</h3>
+            <div id="logs" class="logs"></div>
+          </div>
+          <div>
+            <h3 class="section-title">final response</h3>
+            <pre id="json" class="json">{}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const walletEl = document.getElementById('wallet');
+      const sigsEl = document.getElementById('sigs');
+      const runBtn = document.getElementById('runBtn');
+      const logsEl = document.getElementById('logs');
+      const jsonEl = document.getElementById('json');
+      const metricsEl = document.getElementById('metrics');
+      const statusEl = document.getElementById('status');
+
+      let activeController = null;
+
+      walletEl.value = '6CtCyy8UsRuXFu1eN1PfkCTYTo1xi937px1EejAL2t54';
+
+      function setStatus(text, cls = '') {
+        statusEl.textContent = text;
+        statusEl.className = `status-pill ${cls}`;
+      }
+
+      function addLog(event, data) {
+        const line = document.createElement('div');
+        let cls = '';
+        if (event === 'error') cls = 'err';
+        if (event === 'step_failed') cls = 'warn';
+        if (event === 'step_completed' || event === 'completed') cls = 'ok';
+        line.className = `log ${cls}`;
+        line.textContent = `${new Date().toLocaleTimeString()}  ${event}\n${JSON.stringify(data, null, 2)}`;
+        logsEl.appendChild(line);
+        logsEl.scrollTop = logsEl.scrollHeight;
+      }
+
+      function renderMetrics(response) {
+        const m = response?.metrics;
+        if (!m) return;
+        const cards = [
+          ['signatures', m.signature_count],
+          ['fees (sol)', m.total_fees_sol],
+          ['volume (sol)', m.transfer_volume_sol],
+          ['net flow (sol)', m.net_flow_sol],
+          ['active days', m.active_days],
+          ['inbound (sol)', m.inbound_sol],
+          ['outbound (sol)', m.outbound_sol],
+          ['counterparties', (m.top_counterparties || []).length],
+        ];
+        metricsEl.innerHTML = cards
+          .map(
+            ([k, v]) =>
+              `<div class="metric"><span class="k">${k}</span><span class="v">${v ?? '-'}</span></div>`
+          )
+          .join('');
+      }
+
+      function parseSSEChunk(buffer) {
+        const parts = buffer.split('\n\n');
+        const complete = parts.slice(0, -1);
+        const remaining = parts[parts.length - 1];
+        return { complete, remaining };
+      }
+
+      function parseSSEEvent(block) {
+        let event = 'message';
+        const dataLines = [];
+        for (const row of block.split('\n')) {
+          if (row.startsWith('event:')) event = row.slice(6).trim();
+          if (row.startsWith('data:')) dataLines.push(row.slice(5).trim());
+        }
+        const dataText = dataLines.join('\n');
+        let data = {};
+        try {
+          data = dataText ? JSON.parse(dataText) : {};
+        } catch {
+          data = { raw: dataText };
+        }
+        return { event, data };
+      }
+
+      async function runStream() {
+        const wallet = walletEl.value.trim();
+        const maxSignatures = Number(sigsEl.value || '20');
+        if (!wallet) return;
+
+        if (activeController) activeController.abort();
+        activeController = new AbortController();
+
+        runBtn.disabled = true;
+        logsEl.innerHTML = '';
+        jsonEl.textContent = '{}';
+        metricsEl.innerHTML = '';
+        setStatus('running', 'warn');
+
+        try {
+          const resp = await fetch('/v1/wallet/report/stream', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ wallet, max_signatures: maxSignatures }),
+            signal: activeController.signal,
+          });
+          if (!resp.ok || !resp.body) {
+            const text = await resp.text();
+            throw new Error(`stream failed (${resp.status}): ${text}`);
+          }
+
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parsed = parseSSEChunk(buffer);
+            buffer = parsed.remaining;
+            for (const block of parsed.complete) {
+              if (!block.trim()) continue;
+              const evt = parseSSEEvent(block);
+              addLog(evt.event, evt.data);
+              if (evt.event === 'completed' && evt.data.response) {
+                jsonEl.textContent = JSON.stringify(evt.data.response, null, 2);
+                renderMetrics(evt.data.response);
+                setStatus('completed', 'ok');
+              }
+              if (evt.event === 'error') {
+                setStatus('error', 'err');
+              }
+            }
+          }
+        } catch (err) {
+          addLog('error', { detail: String(err) });
+          setStatus('error', 'err');
+        } finally {
+          runBtn.disabled = false;
+          activeController = null;
+        }
+      }
+
+      runBtn.addEventListener('click', runStream);
+      walletEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') runStream();
+      });
+    </script>
+  </body>
+</html>
