@@ -14,6 +14,7 @@
 ## api
 - `GET /health`
 - `POST /v1/wallet/report`
+- `POST /v1/wallet/report/stream` (SSE progress stream)
 
 request example:
 
@@ -115,6 +116,11 @@ test:
 curl -s http://127.0.0.1:8080/health
 
 curl -s http://127.0.0.1:8080/v1/wallet/report \
+  -H 'content-type: application/json' \
+  -d '{"wallet":"<SOLANA_WALLET_ADDRESS>","max_signatures":20}'
+
+# stream progress in real time (server-sent events)
+curl -N http://127.0.0.1:8080/v1/wallet/report/stream \
   -H 'content-type: application/json' \
   -d '{"wallet":"<SOLANA_WALLET_ADDRESS>","max_signatures":20}'
 ```
