@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     dd_site: str = Field(default='datadoghq.com', alias='DD_SITE')
     dd_send_logs: bool = Field(default=True, alias='DD_SEND_LOGS')
     dd_trace_enabled: bool = Field(default=False, alias='DD_TRACE_ENABLED')
+    dd_trace_agent_url: str | None = Field(default=None, alias='DD_TRACE_AGENT_URL')
 
 
 settings = Settings()

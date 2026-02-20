@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import time
+from urllib.parse import urlparse
 
 from .schemas import TraceStep
 from .settings import settings
@@ -7,6 +8,16 @@ from .settings import settings
 if settings.dd_trace_enabled:
     try:
         from ddtrace import tracer
+        if settings.dd_trace_agent_url:
+            parsed = urlparse(settings.dd_trace_agent_url)
+            if parsed.scheme in {'http', 'https'} and parsed.hostname:
+                tracer.configure(
+                    hostname=parsed.hostname,
+                    port=parsed.port or 8126,
+                    https=(parsed.scheme == 'https'),
+                )
+            elif parsed.scheme == 'unix' and parsed.path:
+                tracer.configure(uds_path=parsed.path)
     except Exception:  # pragma: no cover
         tracer = None
 else:

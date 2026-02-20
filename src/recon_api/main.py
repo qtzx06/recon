@@ -59,7 +59,9 @@ def wallet_report(payload: WalletReportRequest) -> WalletReportResponse:
     social: SocialIntel | None = None
     if settings.recon_enable_x_search and settings.x_bearer_token:
         try:
-            query_terms = [payload.wallet, *intelligence.linked_wallets[:2]]
+            funders = [w.wallet for w in intelligence.likely_funders[:2]]
+            funded = [w.wallet for w in intelligence.likely_funded_wallets[:2]]
+            query_terms = [payload.wallet, *funders, *funded]
             with trace.step('x_search', detail=f'terms={len(query_terms)}'):
                 social = search_x_mentions(
                     bearer_token=settings.x_bearer_token,

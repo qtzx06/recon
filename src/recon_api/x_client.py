@@ -6,16 +6,29 @@ import httpx
 from .schemas import SocialIntel, SocialMention
 
 
+def _clean_bearer_token(raw: str) -> str:
+    token = unquote(raw.strip()).strip('"').strip("'")
+    if token.lower().startswith('bearer '):
+        token = token[7:].strip()
+    return token
+
+
 def search_x_mentions(
     bearer_token: str, query_terms: list[str], timeout_s: int, max_results: int = 10
 ) -> SocialIntel:
-    token = unquote(bearer_token.strip())
+    token = _clean_bearer_token(bearer_token)
+    if not token:
+        raise ValueError('X bearer token is empty')
     terms = [t for t in query_terms if t]
     if not terms:
         return SocialIntel(query_terms=[], total_results=0, mentions=[])
 
     query = ' OR '.join(f'"{term}"' for term in terms[:5])
-    headers = {'Authorization': f'Bearer {token}'}
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/json',
+        'User-Agent': 'recon-api/0.1.0',
+    }
     params = {
         'query': query,
         'max_results': max(10, min(max_results, 100)),
@@ -25,7 +38,18 @@ def search_x_mentions(
     }
 
     with httpx.Client(timeout=timeout_s) as client:
-        resp = client.get('https://api.x.com/2/tweets/search/recent', headers=headers, params=params)
+        resp = client.get(
+            'https://api.x.com/2/tweets/search/recent',
+            headers=headers,
+            params=params,
+        )
+        if resp.status_code in {401, 403}:
+            # Some apps still use api.twitter.com hostnames in credential policy.
+            resp = client.get(
+                'https://api.twitter.com/2/tweets/search/recent',
+                headers=headers,
+                params=params,
+            )
         resp.raise_for_status()
         payload: dict[str, Any] = resp.json()
 
