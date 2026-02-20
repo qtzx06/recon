@@ -10,6 +10,7 @@ SYSTEM_PROMPT = (
     'You are a Solana wallet intelligence analyst. '
     'Given wallet metrics, linkage intelligence, and optional social context, infer behavior, risk profile, and actionable conclusions. '
     'Be concise, specific, and avoid hallucinating unavailable data. '
+    'When mentioning timing/recency, use exact values from intelligence.first_seen_at and intelligence.last_seen_at; do not invent dates or years. '
     'Use sections: Summary, Wallet Graph, Behavior, Risk Flags, Actionable Next Steps.'
 )
 
@@ -45,6 +46,7 @@ def analyze_wallet_with_bedrock(
             'Call out likely funder ties and notable linked wallets from the data only',
             'If social data exists, summarize signal quality and potential identity clues',
             'List 2-4 concrete next checks a trader should run',
+            'If you mention wallet age or recency, cite first_seen_at/last_seen_at directly from the input data',
         ],
     }
 
