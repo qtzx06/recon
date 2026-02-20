@@ -36,6 +36,19 @@ class WalletProgramUsage(BaseModel):
     interactions: int
 
 
+class WalletKnownLabel(BaseModel):
+    address: str
+    label: str
+    category: str
+
+
+class WalletEntityInference(BaseModel):
+    entity: str
+    confidence: str
+    reason: str
+    evidence: list[str]
+
+
 class WalletIntelligence(BaseModel):
     first_seen_at: str | None = None
     last_seen_at: str | None = None
@@ -44,6 +57,8 @@ class WalletIntelligence(BaseModel):
     likely_funded_wallets: list[WalletFundingEdge]
     frequent_programs: list[WalletProgramUsage]
     linked_wallets: list[str]
+    known_labels: list[WalletKnownLabel] = Field(default_factory=list)
+    inferred_entities: list[WalletEntityInference] = Field(default_factory=list)
 
 
 class SocialMention(BaseModel):

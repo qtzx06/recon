@@ -6,6 +6,11 @@ from typing import Any
 import httpx
 
 LAMPORTS_PER_SOL = 1_000_000_000
+KNOWN_ADDRESS_LABELS: dict[str, tuple[str, str]] = {
+    'jitodontfront31111111TradeWithAxiomDotTrade': ('Axiom anti-front-run program', 'axiom'),
+    'FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9': ('Axiom execution/flash program', 'axiom'),
+    '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P': ('Pump.fun program', 'pumpfun'),
+}
 
 
 class SolanaRPCError(RuntimeError):
@@ -260,7 +265,61 @@ def collect_wallet_report_data(
             for p, c in program_usage.most_common(10)
         ],
         'linked_wallets': [w for w, _ in linked_wallets.most_common(20)],
+        'known_labels': [],
+        'inferred_entities': [],
     }
+
+    # Known label enrichment from linked/program/counterparty addresses.
+    candidate_addresses = set(linked_wallets.keys())
+    candidate_addresses.update(program_usage.keys())
+    candidate_addresses.update(counterparties.keys())
+    known_labels = []
+    seen_labels = set()
+    for address in candidate_addresses:
+        meta = KNOWN_ADDRESS_LABELS.get(address)
+        if not meta:
+            continue
+        label, category = meta
+        if address in seen_labels:
+            continue
+        seen_labels.add(address)
+        known_labels.append({'address': address, 'label': label, 'category': category})
+    intelligence['known_labels'] = known_labels
+
+    # Entity inference heuristics.
+    inferred_entities: list[dict[str, Any]] = []
+    axm_wallets = {
+        w
+        for w in candidate_addresses
+        if isinstance(w, str) and w.lower().startswith('axm')
+    }
+    axiom_labels = [l for l in known_labels if l['category'] == 'axiom']
+    if axm_wallets or axiom_labels:
+        evidence = [*sorted(list(axm_wallets))[:4], *[l['address'] for l in axiom_labels][:3]]
+        evidence = list(dict.fromkeys(evidence))
+        signal_count = len(axm_wallets) + len(axiom_labels)
+        confidence = 'high' if signal_count >= 3 else 'medium'
+        inferred_entities.append(
+            {
+                'entity': 'Axiom-linked trading cluster',
+                'confidence': confidence,
+                'reason': 'Detected Axiom-associated addresses/programs and/or axm vanity-linked wallets.',
+                'evidence': evidence,
+            }
+        )
+
+    pump_labels = [l for l in known_labels if l['category'] == 'pumpfun']
+    if pump_labels:
+        inferred_entities.append(
+            {
+                'entity': 'Pump.fun ecosystem activity',
+                'confidence': 'medium',
+                'reason': 'Detected known Pump.fun program interaction in linked/program addresses.',
+                'evidence': [l['address'] for l in pump_labels[:3]],
+            }
+        )
+
+    intelligence['inferred_entities'] = inferred_entities
     return metrics, intelligence
 
 
