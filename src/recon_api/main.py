@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import ValidationError
 
 from .bedrock_client import analyze_wallet_with_bedrock
-from .datadog_client import send_wallet_trace_log
+from .datadog_client import datadog_config_summary, send_test_log, send_wallet_trace_log
 from .observability import TraceCollector
 from .schemas import (
     SocialIntel,
@@ -38,6 +38,20 @@ def _looks_like_solana_wallet(value: str) -> bool:
 @app.get('/health')
 def health() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+@app.get('/debug/datadog')
+def debug_datadog() -> dict[str, object]:
+    return {'ok': True, 'config': datadog_config_summary()}
+
+
+@app.post('/debug/datadog/log-test')
+def debug_datadog_log_test() -> dict[str, object]:
+    try:
+        send_test_log()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f'Datadog log test failed: {exc}') from exc
+    return {'ok': True, 'detail': 'test log sent'}
 
 
 @app.get('/', include_in_schema=False)
