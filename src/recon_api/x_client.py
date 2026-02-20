@@ -6,6 +6,13 @@ import httpx
 from .schemas import SocialIntel, SocialMention
 
 
+class XSearchError(RuntimeError):
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
 def _clean_bearer_token(raw: str) -> str:
     token = unquote(raw.strip()).strip('"').strip("'")
     if token.lower().startswith('bearer '):
@@ -50,7 +57,12 @@ def search_x_mentions(
                 headers=headers,
                 params=params,
             )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            body_preview = resp.text[:220].replace('\n', ' ')
+            raise XSearchError(
+                status_code=resp.status_code,
+                detail=f'X API error {resp.status_code}: {body_preview}',
+            )
         payload: dict[str, Any] = resp.json()
 
     user_by_id: dict[str, dict[str, Any]] = {}

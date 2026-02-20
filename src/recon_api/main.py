@@ -20,7 +20,7 @@ from .schemas import (
 )
 from .settings import settings
 from .solana_client import SolanaRPCError, SolanaRateLimitError, collect_wallet_report_data
-from .x_client import search_x_mentions
+from .x_client import XSearchError, search_x_mentions
 
 app = FastAPI(title='recon API', version='0.1.0')
 EventCallback = Callable[[str, dict | None], None]
@@ -130,12 +130,26 @@ def _build_wallet_report(
                     'total_results': social.total_results if social else 0,
                 },
             )
-        except Exception:
+        except XSearchError as exc:
             social = SocialIntel(query_terms=[], total_results=0, mentions=[])
             _emit(
                 on_event,
                 'step_failed',
-                {'step': 'x_search', 'detail': 'X search failed; continuing without social enrichment'},
+                {
+                    'step': 'x_search',
+                    'status_code': exc.status_code,
+                    'detail': f'{exc.detail}; continuing without social enrichment',
+                },
+            )
+        except Exception as exc:
+            social = SocialIntel(query_terms=[], total_results=0, mentions=[])
+            _emit(
+                on_event,
+                'step_failed',
+                {
+                    'step': 'x_search',
+                    'detail': f'X search failed ({exc}); continuing without social enrichment',
+                },
             )
     else:
         _emit(
